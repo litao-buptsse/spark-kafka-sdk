@@ -1,0 +1,12 @@
+/.idea
+/target
+/project/project
+/project/target
+/build/zinc*
+/build/scala*
+/build/*.jar
+/classes
+/cp
+/mylib
+/deploy.sh
+/dist
