@@ -31,7 +31,7 @@ $ spark-submit \
 ```
 $ spark-submit \
 	--master <master url> \
-	--class com.sogou.spark.streaming.KafkaConsumer \
+	--class com.sogou.kafka.consumer.KafkaConsumer \
 	spark-kafka-sdk-assembly-1.0.jar <config file>
 ```
 
@@ -128,7 +128,7 @@ processor.class=com.sogou.example.KafkaConsumerToConsoleDemo
 ```
 $ spark-submit \
 	--master "local[*]" \
-	--class com.sogou.spark.streaming.KafkaConsumer \
+	--class com.sogou.kafka.consumer.KafkaConsumer \
 	spark-kafka-sdk-assembly-1.0.jar kafka-consumer.properties
 ```
 
