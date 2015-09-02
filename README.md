@@ -92,9 +92,6 @@ spark {
 }
 
 app {
-  kafka-consumer {
-    processor.class = com.sogou.example.KafkaConsumerToConsoleDemo
-  }
   kafka-streaming {
     processor.class = com.sogou.example.KafkaStreamingToHbaseDemo
   }
@@ -135,19 +132,9 @@ kafka {
   consumerThreadNum = 5
 }
 
-spark {
-  app.name = "myapp"
-  streaming {
-    batchDurationSeconds = 10
-  }
-}
-
 app {
   kafka-consumer {
     processor.class = com.sogou.example.KafkaConsumerToConsoleDemo
-  }
-  kafka-streaming {
-    processor.class = com.sogou.example.KafkaStreamingToHbaseDemo
   }
 }
 ```
