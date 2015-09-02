@@ -23,7 +23,7 @@ $ build/sbt assembly
 $ spark-submit \
 	--master <master url> \
 	--class com.sogou.spark.streaming.KafkaStreaming \
-	spark-kafka-sdk-assembly-1.0.jar <config file>
+	spark-kafka-sdk-assembly-1.0.jar
 ```
 
 #### 2. read kafka via kafka consumer api
@@ -32,20 +32,21 @@ $ spark-submit \
 $ spark-submit \
 	--master <master url> \
 	--class com.sogou.kafka.consumer.KafkaConsumer \
-	spark-kafka-sdk-assembly-1.0.jar <config file>
+	spark-kafka-sdk-assembly-1.0.jar
 ```
 
 ## Configuraion
 
 | Param | Description |
 | ------------ | ----------- |
-| processor.class | processor class |
+| app.kafka-streaming.processor.class | kafka streaming processor class |
+| app.kafka-consumer.processor.class | kafka consumer processor class |
 | kafka.zookeeperQuorum | kafka zookeeper address |
 | kafka.topics | kafka topics |
 | kafka.consumerGroup | kafka consumer group |
 | kafka.consumerThreadNum | kafka consumer thread num |
 | spark.app.name | spark app name |
-| streaming.batchDurationSeconds | spark streaming batch duration seconds |
+| spark.streaming.batchDurationSeconds | spark streaming batch duration seconds |
 
 
 ## Kafka Streaming Demo
@@ -73,27 +74,40 @@ class KafkaStreamingToHbaseDemo extends RDDProcessor {
 }
 ```
 
-#### 2. Custom property file
+#### 2. Update application.conf
 
 ```
-spark.app.name=wordcount-kafka-to-hbase
-streaming.batchDurationSeconds=10
-kafka.zookeeperQuorum=10.11.214.224:2182/kafka
-kafka.topics=wordcount
-kafka.consumerGroup=spark-streaming-wordcount
-kafka.consumerThreadNum=5
-flume.parseAsFlumeEvent=true
-flume.inputCharset=UTF-8
-processor.class=com.sogou.example.KafkaStreamingToHbaseDemo
+kafka {
+  zookeeperQuorum = "localhost:2181/kafka"
+  topics = "mytopic"
+  consumerGroup = "mygroup"
+  consumerThreadNum = 5
+}
+
+spark {
+  app.name = "myapp"
+  streaming {
+    batchDurationSeconds = 10
+  }
+}
+
+app {
+  kafka-consumer {
+    processor.class = com.sogou.example.KafkaConsumerToConsoleDemo
+  }
+  kafka-streaming {
+    processor.class = com.sogou.example.KafkaStreamingToHbaseDemo
+  }
+}
 ```
 
-#### 3. Run with the custom property file
+#### 3. Running
 
 ```
 $ spark-submit \
 	--master "local[*]" \
 	--class com.sogou.spark.streaming.KafkaStreaming \
-	spark-kafka-sdk-assembly-1.0.jar kafka-streaming.properties
+	spark-kafka-sdk-assembly-1.0.jar
 ```
 
 ## Kafka Consumer Demo
@@ -111,25 +125,40 @@ class KafkaConsumerToConsoleDemo extends FlumeEventProcessor {
 }
 ```
 
-#### 2. Custom property file
+#### 2. Update application.conf
 
 ```
-kafka.zookeeperQuorum=localhost:2181/kafka
-kafka.topics=mytopic
-kafka.consumerGroup=mygroup
-kafka.consumerThreadNum=5
-flume.parseAsFlumeEvent=true
-flume.inputCharset=UTF-8
-processor.class=com.sogou.example.KafkaConsumerToConsoleDemo
+kafka {
+  zookeeperQuorum = "localhost:2181/kafka"
+  topics = "mytopic"
+  consumerGroup = "mygroup"
+  consumerThreadNum = 5
+}
+
+spark {
+  app.name = "myapp"
+  streaming {
+    batchDurationSeconds = 10
+  }
+}
+
+app {
+  kafka-consumer {
+    processor.class = com.sogou.example.KafkaConsumerToConsoleDemo
+  }
+  kafka-streaming {
+    processor.class = com.sogou.example.KafkaStreamingToHbaseDemo
+  }
+}
 ```
 
-#### 3. Run with the custom property file
+#### 3. Running
 
 ```
 $ spark-submit \
 	--master "local[*]" \
 	--class com.sogou.kafka.consumer.KafkaConsumer \
-	spark-kafka-sdk-assembly-1.0.jar kafka-consumer.properties
+	spark-kafka-sdk-assembly-1.0.jar
 ```
 
 ## About Spark Streaming
