@@ -13,8 +13,8 @@ import org.slf4j.{Logger, LoggerFactory}
 /**
  * Created by Tao Li on 2015/8/28.
  */
-class KafkaConsumerConfiguration(file: String) extends Serializable {
-  private val config = ConfigFactory.load(file)
+class KafkaConsumerConfiguration extends Serializable {
+  private val config = ConfigFactory.load()
 
   val KAFKA_ZOOKEEPER_QUORUM = config.getString("kafka.zookeeperQuorum")
   val KAFKA_TOPICS = config.getString("kafka.topics")
@@ -24,7 +24,7 @@ class KafkaConsumerConfiguration(file: String) extends Serializable {
   val FLUME_PARSE_AS_FLUME_EVENT = config.getBoolean("flume.parseAsFlumeEvent")
   val FLUME_INPUT_CHARSET = config.getString("flume.inputCharset")
 
-  val PROCESSOR_CLASS = config.getString("processor.class")
+  val PROCESSOR_CLASS = config.getString("app.kafka-consumer.processor.class")
 }
 
 class KafkaConsumerDriver(config: KafkaConsumerConfiguration) extends Driver {
@@ -78,10 +78,7 @@ class KafkaConsumerDriver(config: KafkaConsumerConfiguration) extends Driver {
 
 object KafkaConsumer {
   def main(args: Array[String]) {
-    val file = args(0)
-    val config = new KafkaConsumerConfiguration(file)
-
-    val driver = new KafkaConsumerDriver(config)
+    val driver = new KafkaConsumerDriver(new KafkaConsumerConfiguration)
 
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       override def run = driver.stop

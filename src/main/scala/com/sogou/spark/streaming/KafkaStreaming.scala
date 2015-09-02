@@ -16,12 +16,12 @@ import org.slf4j.LoggerFactory
 /**
  * Created by Tao Li on 2015/8/19.
  */
-class KafkaStreamingConfiguration(file: String) extends Serializable {
-  private val config = ConfigFactory.load(file)
+class KafkaStreamingConfiguration extends Serializable {
+  private val config = ConfigFactory.load()
 
   val SPARK_APP_NAME = config.getString("spark.app.name")
 
-  val STREAMING_BATCH_DURATION_SECONDS = config.getLong("streaming.batchDurationSeconds")
+  val STREAMING_BATCH_DURATION_SECONDS = config.getLong("spark.streaming.batchDurationSeconds")
 
   val KAFKA_ZOOKEEPER_QUORUM = config.getString("kafka.zookeeperQuorum")
   val KAFKA_TOPICS = config.getString("kafka.topics")
@@ -31,7 +31,7 @@ class KafkaStreamingConfiguration(file: String) extends Serializable {
   val FLUME_PARSE_AS_FLUME_EVENT = config.getBoolean("flume.parseAsFlumeEvent")
   val FLUME_INPUT_CHARSET = config.getString("flume.inputCharset")
 
-  val PROCESSOR_CLASS = config.getString("processor.class")
+  val PROCESSOR_CLASS = config.getString("app.kafka-streaming.processor.class")
 }
 
 class KafkaStreamingDriver(config: KafkaStreamingConfiguration)
@@ -76,10 +76,7 @@ class KafkaStreamingDriver(config: KafkaStreamingConfiguration)
 object KafkaStreaming {
 
   def main(args: Array[String]) {
-    val file = args(0)
-    val config = new KafkaStreamingConfiguration(file)
-
-    val driver = new KafkaStreamingDriver(config)
+    val driver = new KafkaStreamingDriver(new KafkaStreamingConfiguration)
 
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       override def run = driver.stop
