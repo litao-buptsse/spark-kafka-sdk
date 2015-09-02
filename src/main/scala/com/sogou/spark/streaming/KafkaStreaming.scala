@@ -4,7 +4,7 @@ import com.sogou.common.driver.Driver
 import com.sogou.common.util.Utils._
 import com.sogou.kafka.serializer.AvroFlumeEventDecoder
 import com.sogou.spark.streaming.processor.RDDProcessor
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import kafka.serializer.StringDecoder
 import org.apache.flume.Event
 import org.apache.spark.SparkConf
@@ -16,8 +16,8 @@ import org.slf4j.LoggerFactory
 /**
  * Created by Tao Li on 2015/8/19.
  */
-class KafkaStreamingConfiguration extends Serializable {
-  private val config = ConfigFactory.load()
+class KafkaStreamingSettings(config: Config) extends Serializable {
+  config.checkValid(ConfigFactory.defaultReference(), "kafka", "flume", "spark", "app")
 
   val SPARK_APP_NAME = config.getString("spark.app.name")
 
@@ -34,30 +34,30 @@ class KafkaStreamingConfiguration extends Serializable {
   val PROCESSOR_CLASS = config.getString("app.kafka-streaming.processor.class")
 }
 
-class KafkaStreamingDriver(config: KafkaStreamingConfiguration)
+class KafkaStreamingDriver(settings: KafkaStreamingSettings)
   extends Driver with Serializable {
   private val LOG = LoggerFactory.getLogger(getClass)
 
-  private val batchDuration = Seconds(config.STREAMING_BATCH_DURATION_SECONDS)
+  private val batchDuration = Seconds(settings.STREAMING_BATCH_DURATION_SECONDS)
   private val kafkaParams = Map[String, String](
-    "zookeeper.connect" -> config.KAFKA_ZOOKEEPER_QUORUM,
-    "group.id" -> config.KAFKA_CONSUMER_GROUP)
-  private val topicMap = config.KAFKA_TOPICS.split(",").
-    map((_, config.KAFKA_CONSUMER_THREAD_NUM)).toMap
-  private val processor = Class.forName(config.PROCESSOR_CLASS).
+    "zookeeper.connect" -> settings.KAFKA_ZOOKEEPER_QUORUM,
+    "group.id" -> settings.KAFKA_CONSUMER_GROUP)
+  private val topicMap = settings.KAFKA_TOPICS.split(",").
+    map((_, settings.KAFKA_CONSUMER_THREAD_NUM)).toMap
+  private val processor = Class.forName(settings.PROCESSOR_CLASS).
     newInstance.asInstanceOf[RDDProcessor]
 
   private var sscOpt: Option[StreamingContext] = None
 
   override def start = {
     val conf = new SparkConf().
-      setAppName(config.SPARK_APP_NAME).set("spark.scheduler.mode", "FAIR")
+      setAppName(settings.SPARK_APP_NAME).set("spark.scheduler.mode", "FAIR")
     val sscOpt = Some(new StreamingContext(conf, batchDuration))
 
     val inputStream = KafkaUtils.createStream[
       String, Event, StringDecoder, AvroFlumeEventDecoder](
         sscOpt.get, kafkaParams, topicMap, StorageLevel.MEMORY_ONLY)
-    val bodyStream = inputStream.map(e => new String(e._2.getBody, config.FLUME_INPUT_CHARSET))
+    val bodyStream = inputStream.map(e => new String(e._2.getBody, settings.FLUME_INPUT_CHARSET))
     bodyStream.foreachRDD(rdd => processor.process(rdd))
 
     sscOpt.get.start
@@ -76,7 +76,8 @@ class KafkaStreamingDriver(config: KafkaStreamingConfiguration)
 object KafkaStreaming {
 
   def main(args: Array[String]) {
-    val driver = new KafkaStreamingDriver(new KafkaStreamingConfiguration)
+    val config = ConfigFactory.load()
+    val driver = new KafkaStreamingDriver(new KafkaStreamingSettings(config))
 
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       override def run = driver.stop

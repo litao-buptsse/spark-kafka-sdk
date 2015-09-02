@@ -6,15 +6,15 @@ import com.sogou.common.driver.Driver
 import com.sogou.common.thread.DaemonThreadFactory
 import com.sogou.common.util.Utils._
 import com.sogou.kafka.consumer.processor.KafkaMessageProcessor
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import kafka.consumer.{Consumer, ConsumerConfig, KafkaStream}
 import org.slf4j.{Logger, LoggerFactory}
 
 /**
  * Created by Tao Li on 2015/8/28.
  */
-class KafkaConsumerConfiguration extends Serializable {
-  private val config = ConfigFactory.load()
+class KafkaConsumerSettings(config: Config) extends Serializable {
+  config.checkValid(ConfigFactory.defaultReference(), "kafka", "flume", "app")
 
   val KAFKA_ZOOKEEPER_QUORUM = config.getString("kafka.zookeeperQuorum")
   val KAFKA_TOPICS = config.getString("kafka.topics")
@@ -27,17 +27,17 @@ class KafkaConsumerConfiguration extends Serializable {
   val PROCESSOR_CLASS = config.getString("app.kafka-consumer.processor.class")
 }
 
-class KafkaConsumerDriver(config: KafkaConsumerConfiguration) extends Driver {
+class KafkaConsumerDriver(settings: KafkaConsumerSettings) extends Driver {
   private val LOG: Logger = LoggerFactory.getLogger(getClass)
 
   private val props = new Properties()
-  props.put("zookeeper.connect", config.KAFKA_ZOOKEEPER_QUORUM)
-  props.put("group.id", config.KAFKA_CONSUMER_GROUP)
+  props.put("zookeeper.connect", settings.KAFKA_ZOOKEEPER_QUORUM)
+  props.put("group.id", settings.KAFKA_CONSUMER_GROUP)
 
-  private val topicMap = config.KAFKA_TOPICS.split(",").
-    map((_, config.KAFKA_CONSUMER_THREAD_NUM)).toMap
+  private val topicMap = settings.KAFKA_TOPICS.split(",").
+    map((_, settings.KAFKA_CONSUMER_THREAD_NUM)).toMap
 
-  private val processor = Class.forName(config.PROCESSOR_CLASS).
+  private val processor = Class.forName(settings.PROCESSOR_CLASS).
     newInstance.asInstanceOf[KafkaMessageProcessor]
 
   private val consumer = Consumer.create(new ConsumerConfig(props))
@@ -78,7 +78,8 @@ class KafkaConsumerDriver(config: KafkaConsumerConfiguration) extends Driver {
 
 object KafkaConsumer {
   def main(args: Array[String]) {
-    val driver = new KafkaConsumerDriver(new KafkaConsumerConfiguration)
+    val config = ConfigFactory.load()
+    val driver = new KafkaConsumerDriver(new KafkaConsumerSettings(config))
 
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       override def run = driver.stop
