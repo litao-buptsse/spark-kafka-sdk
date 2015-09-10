@@ -2,11 +2,10 @@ package com.sogou.spark.streaming
 
 import com.sogou.common.driver.Driver
 import com.sogou.common.util.Utils._
-import com.sogou.kafka.serializer.AvroFlumeEventDecoder
+import com.sogou.kafka.serializer.AvroFlumeEventBodyDecoder
 import com.sogou.spark.streaming.processor.RDDProcessor
 import com.typesafe.config.{Config, ConfigFactory}
 import kafka.serializer.StringDecoder
-import org.apache.flume.Event
 import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.kafka.KafkaUtils
@@ -27,6 +26,8 @@ class KafkaStreamingSettings(config: Config) extends Serializable {
   val KAFKA_TOPICS = config.getString("kafka.topics")
   val KAFKA_CONSUMER_GROUP = config.getString("kafka.consumerGroup")
   val KAFKA_CONSUMER_THREAD_NUM = config.getInt("kafka.consumerThreadNum")
+  // TODO should support auto load all kafka properties which start with "kafka."
+  val KAFKA_FETCH_MESSAGE_MAX_BYTES = config.getString("kafka.fetch.message.max.bytes")
 
   val FLUME_PARSE_AS_FLUME_EVENT = config.getBoolean("flume.parseAsFlumeEvent")
   val FLUME_INPUT_CHARSET = config.getString("flume.inputCharset")
@@ -41,7 +42,10 @@ class KafkaStreamingDriver(settings: KafkaStreamingSettings)
   private val batchDuration = Seconds(settings.STREAMING_BATCH_DURATION_SECONDS)
   private val kafkaParams = Map[String, String](
     "zookeeper.connect" -> settings.KAFKA_ZOOKEEPER_QUORUM,
-    "group.id" -> settings.KAFKA_CONSUMER_GROUP)
+    "group.id" -> settings.KAFKA_CONSUMER_GROUP,
+    "fetch.message.max.bytes" -> settings.KAFKA_FETCH_MESSAGE_MAX_BYTES,
+    "flume.event.body.serializer.encoding" -> settings.FLUME_INPUT_CHARSET
+  )
   private val topicMap = settings.KAFKA_TOPICS.split(",").
     map((_, settings.KAFKA_CONSUMER_THREAD_NUM)).toMap
   private val processor = Class.forName(settings.PROCESSOR_CLASS).
@@ -55,10 +59,9 @@ class KafkaStreamingDriver(settings: KafkaStreamingSettings)
     val sscOpt = Some(new StreamingContext(conf, batchDuration))
 
     val inputStream = KafkaUtils.createStream[
-      String, Event, StringDecoder, AvroFlumeEventDecoder](
+      String, String, StringDecoder, AvroFlumeEventBodyDecoder](
         sscOpt.get, kafkaParams, topicMap, StorageLevel.MEMORY_ONLY)
-    val bodyStream = inputStream.map(e => new String(e._2.getBody, settings.FLUME_INPUT_CHARSET))
-    bodyStream.foreachRDD(rdd => processor.process(rdd))
+    inputStream.map(_._2).foreachRDD(rdd => processor.process(rdd))
 
     sscOpt.get.start
     sscOpt.get.awaitTermination
