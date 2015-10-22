@@ -1,4 +1,4 @@
-package com.sogou.spark.streaming.demo
+package com.sogou.example
 
 import com.sogou.spark.streaming.processor.RDDProcessor
 import org.apache.hadoop.hbase.util.Bytes
@@ -7,7 +7,7 @@ import org.apache.spark.rdd.RDD
 /**
  * Created by Tao Li on 8/20/15.
  */
-class SparkStreamingToHbaseDemoStreamingToHbaseDemo extends RDDProcessor {
+class SparkStreamingToHbaseDemo extends RDDProcessor {
 
   override def process(rdd: RDD[String]) = {
     val table = "spark-streaming-to-hbase-demo"

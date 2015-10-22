@@ -5,6 +5,6 @@ WORKDIR $APPROOT
 ADD spark-kafka-sdk_2.10.4-1.0 $APPROOT
 
 RUN mkdir -p logs
-CMD  sh start.sh >logs/spark-kafka-sdk.out 2>&1
+CMD bin/start.sh >logs/spark-kafka-sdk.out 2>&1
 
 VOLUME /search/app/logs

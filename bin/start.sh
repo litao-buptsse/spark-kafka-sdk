@@ -16,5 +16,5 @@ spark-submit \
     --num-executors 3 \
     --executor-cores 1 \
     --queue root.spark \
-    --class com.sogou.spark.streaming.KafkaStreaming \
+    --class com.sogou.spark.streaming.SparkStreaming \
     $libDir/spark-kafka-sdk-assembly-1.0.jar

@@ -13,7 +13,7 @@ endif
 all: build
 
 clean:
-	build/sbt clean; rm -fr dist
+	cd ..; build/sbt clean; rm -fr dist; cd -
 
 dist:
 	cd ..; bin/release-tgz.sh; cd -

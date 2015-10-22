@@ -1,4 +1,4 @@
-package com.sogou.kafka.consumer.demo
+package com.sogou.example
 
 import com.sogou.kafka.consumer.processor.FlumeEventProcessor
 import org.apache.flume.Event
