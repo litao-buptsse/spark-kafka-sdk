@@ -9,38 +9,48 @@
 
 ## Building
 
+
+### 1. docker build
+
 ```
-$ build/sbt assembly
+$ cd docker; make
 ```
 
-* assembly jar location: target/scala-2.10/spark-kafka-sdk-assembly-1.0.jar
+* docker image: registry.docker.dev.sogou-inc.com:5000/clouddev/spark-kafka-sdk:1.0
+
+### 2. release tgz
+
+```
+$ bin/release-tgz.sh
+```
+
+* tgz location: dist/spark-kafka-sdk_2.10.4-1.0.tgz
+
 
 ## Running
 
-#### 1. read kafka via spark streaming
+### 1. docker_run.sh
 
 ```
-$ spark-submit \
-	--master <master url> \
-	--class com.sogou.spark.streaming.KafkaStreaming \
-	spark-kafka-sdk-assembly-1.0.jar
+$ mkdir app; cp docker/docker_run.sh app/; cp conf/* app/
+$ cd app/; ./docker_run.sh
 ```
 
-#### 2. read kafka via kafka consumer api
+### 2. bin/start.sh
 
 ```
-$ spark-submit \
-	--master <master url> \
-	--class com.sogou.kafka.consumer.KafkaConsumer \
-	spark-kafka-sdk-assembly-1.0.jar
+$ tar -xzvf spark-kafka-sdk-scala_2.10.4-1.0.tgz
+$ cd spark-kafka-sdk-scala_2.10.4-1.0; ./run.sh <input>
 ```
 
 ## Configuraion
 
+* config file location: conf/application.conf
+
 | Param | Description |
 | ------------ | ----------- |
-| app.kafka-streaming.processor.class | kafka streaming processor class |
-| app.kafka-consumer.processor.class | kafka consumer processor class |
+| app.kafkaStreaming.processor.class | kafka streaming processor class |
+| app.kafkaConsumer.processor.class | kafka consumer processor class |
 | kafka.zookeeperQuorum | kafka zookeeper address |
 | kafka.topics | kafka topics |
 | kafka.consumerGroup | kafka consumer group |
@@ -51,10 +61,8 @@ $ spark-submit \
 
 ## Kafka Streaming Demo
 
-#### 1. Extends RDDProcessor trait and implement process method
-
 ```scala
-class KafkaStreamingToHbaseDemo extends RDDProcessor {
+class SparkStreamingToHbaseDemo extends RDDProcessor {
 
   override def process(rdd: RDD[String]) = {
     val table = "kafka-streaming-to-hbase-demo"
@@ -74,42 +82,7 @@ class KafkaStreamingToHbaseDemo extends RDDProcessor {
 }
 ```
 
-#### 2. Update application.conf
-
-```
-kafka {
-  zookeeperQuorum = "localhost:2181/kafka"
-  topics = "mytopic"
-  consumerGroup = "mygroup"
-  consumerThreadNum = 5
-}
-
-spark {
-  app.name = "myapp"
-  streaming {
-    batchDurationSeconds = 10
-  }
-}
-
-app {
-  kafka-streaming {
-    processor.class = com.sogou.example.KafkaStreamingToHbaseDemo
-  }
-}
-```
-
-#### 3. Running
-
-```
-$ spark-submit \
-	--master "local[*]" \
-	--class com.sogou.spark.streaming.KafkaStreaming \
-	spark-kafka-sdk-assembly-1.0.jar
-```
-
 ## Kafka Consumer Demo
-
-#### 1. Extends KafkaMessageProcessor trait and implement process method (you can also implement KafkaMessageProcessor's child class such as FlumeEventProcessor)
 
 ```scala
 class KafkaConsumerToConsoleDemo extends FlumeEventProcessor {
@@ -120,32 +93,6 @@ class KafkaConsumerToConsoleDemo extends FlumeEventProcessor {
     LOG.info(body)
   }
 }
-```
-
-#### 2. Update application.conf
-
-```
-kafka {
-  zookeeperQuorum = "localhost:2181/kafka"
-  topics = "mytopic"
-  consumerGroup = "mygroup"
-  consumerThreadNum = 5
-}
-
-app {
-  kafka-consumer {
-    processor.class = com.sogou.example.KafkaConsumerToConsoleDemo
-  }
-}
-```
-
-#### 3. Running
-
-```
-$ spark-submit \
-	--master "local[*]" \
-	--class com.sogou.kafka.consumer.KafkaConsumer \
-	spark-kafka-sdk-assembly-1.0.jar
 ```
 
 ## About Spark Streaming
