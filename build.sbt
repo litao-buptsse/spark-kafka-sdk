@@ -18,9 +18,6 @@ resolvers ++= Seq(
   "Sogou Maven Repository" at "http://cloud.sogou-inc.com/nexus/content/groups/public"
 )
 
-// TODO ugly solution to package the conf file to the jar
-unmanagedResourceDirectories in Compile += baseDirectory.value / "conf"
-
 unmanagedBase := baseDirectory.value / "lib"
 
 libraryDependencies ++= {

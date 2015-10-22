@@ -7,10 +7,10 @@ import org.apache.spark.rdd.RDD
 /**
  * Created by Tao Li on 8/20/15.
  */
-class KafkaStreamingToHbaseDemo extends RDDProcessor {
+class SparkStreamingToHbaseDemoStreamingToHbaseDemo extends RDDProcessor {
 
   override def process(rdd: RDD[String]) = {
-    val table = "kafka-streaming-to-hbase-demo"
+    val table = "spark-streaming-to-hbase-demo"
 
     val wordCount = rdd.map((_, 1L)).reduceByKey(_ + _)
     val toHbase: RDD[(String, Map[String, Map[String, (Long, Long)]])] = wordCount.map(x =>
