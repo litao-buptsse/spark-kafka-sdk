@@ -59,13 +59,13 @@ $ cd spark-kafka-sdk-scala_2.10.4-1.0; ./run.sh <input>
 | spark.streaming.batchDurationSeconds | spark streaming batch duration seconds |
 
 
-## Kafka Streaming Demo
+## Spark Streaming Demo
 
 ```scala
 class SparkStreamingToHbaseDemo extends RDDProcessor {
 
   override def process(rdd: RDD[String]) = {
-    val table = "kafka-streaming-to-hbase-demo"
+    val table = "spark-streaming-to-hbase-demo"
 
     val wordCount = rdd.map((_, 1L)).reduceByKey(_ + _)
     val toHbase: RDD[(String, Map[String, Map[String, (Long, Long)]])] = wordCount.map(x =>
