@@ -1,11 +1,11 @@
-package com.sogou
+package com.sogou.spark.streaming
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValue}
 
 /**
  * Created by Tao Li on 9/30/15.
  */
-class Settings(config: Config) extends Serializable {
+class SparkStreamingSettings(config: Config) extends Serializable {
   config.checkValid(ConfigFactory.defaultReference(), "root")
 
   val KAFKA_ZOOKEEPER_QUORUM = config.getString("root.kafka.zookeeperQuorum")
@@ -16,8 +16,7 @@ class Settings(config: Config) extends Serializable {
   val SPARK_APP_NAME = config.getString("root.spark.appName")
   val BATCH_DURATION_SECONDS = config.getLong("root.spark.streaming.batchDurationSeconds")
 
-  val SPARK_STREAMING_PROCESSOR_CLASS = config.getString("root.app.sparkStreaming.processor.class")
-  val KAFKA_CONSUMER_PROCESSOR_CLASS = config.getString("root.app.kafkaConsumer.processor.class")
+  val PROCESSOR_CLASS = config.getString("root.app.processor.class")
 
   import scala.collection.JavaConversions._
 

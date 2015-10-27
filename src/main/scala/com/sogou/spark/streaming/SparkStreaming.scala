@@ -1,6 +1,5 @@
 package com.sogou.spark.streaming
 
-import com.sogou.Settings
 import com.sogou.common.driver.Driver
 import com.sogou.common.util.Utils._
 import com.sogou.kafka.serializer.AvroFlumeEventBodyDecoder
@@ -16,7 +15,7 @@ import org.slf4j.LoggerFactory
 /**
  * Created by Tao Li on 2015/8/19.
  */
-class SparkStreamingDriver(settings: Settings)
+class SparkStreamingDriver(settings: SparkStreamingSettings)
   extends Driver with Serializable {
   private val LOG = LoggerFactory.getLogger(getClass)
 
@@ -27,7 +26,7 @@ class SparkStreamingDriver(settings: Settings)
   ) ++ settings.kafkaConfigMap
   private val topicMap = settings.KAFKA_TOPICS.split(",").
     map((_, settings.KAFKA_CONSUMER_THREAD_NUM)).toMap
-  private val processor = Class.forName(settings.SPARK_STREAMING_PROCESSOR_CLASS).
+  private val processor = Class.forName(settings.PROCESSOR_CLASS).
     newInstance.asInstanceOf[RDDProcessor]
 
   private var sscOpt: Option[StreamingContext] = None
@@ -36,7 +35,7 @@ class SparkStreamingDriver(settings: Settings)
     val conf = new SparkConf().
       setAppName(settings.SPARK_APP_NAME).set("spark.scheduler.mode", "FAIR")
     for ((k, v) <- settings.sparkConfigMap) conf.set(k, v)
-    val sscOpt = Some(new StreamingContext(conf, batchDuration))
+    sscOpt = Some(new StreamingContext(conf, batchDuration))
 
     val inputStream = KafkaUtils.createStream[
       String, String, StringDecoder, AvroFlumeEventBodyDecoder](
@@ -60,7 +59,7 @@ object SparkStreaming {
 
   def main(args: Array[String]) {
     val config = ConfigFactory.load()
-    val driver = new SparkStreamingDriver(new Settings(config))
+    val driver = new SparkStreamingDriver(new SparkStreamingSettings(config))
 
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       override def run = driver.stop

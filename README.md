@@ -49,8 +49,7 @@ $ cd spark-kafka-sdk-scala_2.10.4-1.0; ./run.sh <input>
 
 | Param | Description |
 | ------------ | ----------- |
-| app.kafkaStreaming.processor.class | kafka streaming processor class |
-| app.kafkaConsumer.processor.class | kafka consumer processor class |
+| app.processor.class | spark streaming processor class |
 | kafka.zookeeperQuorum | kafka zookeeper address |
 | kafka.topics | kafka topics |
 | kafka.consumerGroup | kafka consumer group |
@@ -59,7 +58,7 @@ $ cd spark-kafka-sdk-scala_2.10.4-1.0; ./run.sh <input>
 | spark.streaming.batchDurationSeconds | spark streaming batch duration seconds |
 
 
-## Spark Streaming Demo
+## Example-1: Implement RDDProcessor
 
 ```scala
 class SparkStreamingToHbaseDemo extends RDDProcessor {
@@ -82,15 +81,37 @@ class SparkStreamingToHbaseDemo extends RDDProcessor {
 }
 ```
 
-## Kafka Consumer Demo
+## Example-2: Implement LineProcessor
 
 ```scala
-class KafkaConsumerToConsoleDemo extends FlumeEventProcessor {
-  private val LOG = LoggerFactory.getLogger(getClass)
+class SparkStreamingToMysqlDemo extends LineProcessor {
+  private val CONNECT_URL = s"jdbc:mysql://$IP:$PORT/$DATABASE?user=$USERNAME&password=$PASSWORD"
+  private val DRIVER = "com.mysql.jdbc.Driver"
 
-  override def processEvent(event: Event) = {
-    val body = new String(event.getBody)
-    LOG.info(body)
+  private var connOpt: Option[Connection] = None
+  private var stmtOpt: Option[Statement] = None
+
+  override def init(): Unit = {
+    Class.forName(DRIVER)
+    connOpt = Some(DriverManager.getConnection(CONNECT_URL))
+    stmtOpt = Some(connOpt.get.createStatement)
+  }
+
+  override def process(message: String): Unit = {
+    val arr = message.split("\t")
+    val name = arr(0)
+    val age = arr(1)
+    val sql = s"INSERT INTO student(name, age) VALUES('$name', '$age')"
+    stmtOpt.get.execute(sql)
+  }
+
+  override def close(): Unit = {
+    if (stmtOpt.isDefined) {
+      stmtOpt.get.close()
+    }
+    if (connOpt.isDefined) {
+      connOpt.get.close()
+    }
   }
 }
 ```
