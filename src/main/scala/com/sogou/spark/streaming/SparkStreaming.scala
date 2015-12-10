@@ -4,11 +4,12 @@ import com.sogou.common.driver.Driver
 import com.sogou.common.util.Utils._
 import com.sogou.kafka.serializer.AvroFlumeEventBodyDecoder
 import com.sogou.spark.streaming.processor.RDDProcessor
+import com.sogou.zookeeper.ZKService
 import com.typesafe.config.ConfigFactory
 import kafka.serializer.StringDecoder
 import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.streaming.kafka.KafkaUtils
+import org.apache.spark.streaming.kafka.{HasOffsetRanges, OffsetRange, KafkaUtils}
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.slf4j.LoggerFactory
 
@@ -26,6 +27,7 @@ class SparkStreamingDriver(settings: SparkStreamingSettings)
   ) ++ settings.kafkaConfigMap
   private val topicMap = settings.KAFKA_TOPICS.split(",").
     map((_, settings.KAFKA_CONSUMER_THREAD_NUM)).toMap
+  private val topicSet = settings.KAFKA_TOPICS.split(",").toSet
   private val processor = Class.forName(settings.PROCESSOR_CLASS).
     newInstance.asInstanceOf[RDDProcessor]
 
@@ -37,10 +39,21 @@ class SparkStreamingDriver(settings: SparkStreamingSettings)
     for ((k, v) <- settings.sparkConfigMap) conf.set(k, v)
     sscOpt = Some(new StreamingContext(conf, batchDuration))
 
-    val inputStream = KafkaUtils.createStream[
+    var offsetRanges = Array[OffsetRange]()
+
+    val inputStream = KafkaUtils.createDirectStream[
       String, String, StringDecoder, AvroFlumeEventBodyDecoder](
-        sscOpt.get, kafkaParams, topicMap, StorageLevel.MEMORY_AND_DISK_SER)
-    inputStream.map(_._2).foreachRDD(rdd => processor.process(rdd))
+        sscOpt.get, kafkaParams, topicSet)
+
+    inputStream.transform { rdd =>
+      offsetRanges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
+      rdd
+    }.map(_._2).foreachRDD { rdd =>
+      processor.process(rdd)
+      for (o <- offsetRanges) {
+        println(s"${o.topic} ${o.partition} ${o.fromOffset} ${o.untilOffset}")
+      }
+    }
 
     sscOpt.get.start
     sscOpt.get.awaitTermination

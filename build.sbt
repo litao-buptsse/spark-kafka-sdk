@@ -21,7 +21,7 @@ resolvers ++= Seq(
 unmanagedBase := baseDirectory.value / "lib"
 
 libraryDependencies ++= {
-  val sparkVersion = "1.4.0"
+  val sparkVersion = "1.5.0"
   val hbaseVersion = "0.98.13-hadoop2"
   val excludeSpark = ExclusionRule(organization = "org.apache.spark")
   val excludeHbase = ExclusionRule(organization = "org.apache.hbase")
