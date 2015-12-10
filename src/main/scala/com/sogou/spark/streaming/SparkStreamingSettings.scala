@@ -9,9 +9,13 @@ class SparkStreamingSettings(config: Config) extends Serializable {
   config.checkValid(ConfigFactory.defaultReference(), "root")
 
   val KAFKA_ZOOKEEPER_QUORUM = config.getString("root.kafka.zookeeperQuorum")
+  val KAFKA_BROKER_LIST = config.getString("root.kafka.brokerList")
   val KAFKA_TOPICS = config.getString("root.kafka.topics")
   val KAFKA_CONSUMER_GROUP = config.getString("root.kafka.consumerGroup")
   val KAFKA_CONSUMER_THREAD_NUM = config.getInt("root.kafka.consumerThreadNum")
+
+  val KAFKA_SESSION_TIMEOUT = config.getInt("root.kafka.zookeeperSessionTimeout")
+  val KAFKA_CONNECTION_TIMEOUT = config.getInt("root.kafka.zookeeperConnectionTimeout")
 
   val SPARK_APP_NAME = config.getString("root.spark.appName")
   val BATCH_DURATION_SECONDS = config.getLong("root.spark.streaming.batchDurationSeconds")
