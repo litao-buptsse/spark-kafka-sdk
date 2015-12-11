@@ -41,35 +41,41 @@ class SparkStreamingDriver(settings: SparkStreamingSettings)
 
     val topicPartitionIds = ZkUtils.getPartitionsForTopics(zkClientOpt.get, topicSeq)
 
+    def getConsumerOffsetPath(topic: String) = {
+      s"/consumers/${settings.KAFKA_CONSUMER_GROUP}/offsets/$topic"
+    }
+    def getConsumerPartitionOffsetPath(topic: String, partitionId: Int) = {
+      s"${getConsumerOffsetPath(topic)}/$partitionId"
+    }
+
     // if consumer offsets not exist, set it with the latest
     topicSeq.foreach { topic =>
-      val consumerOffsetPath = s"/consumers/${settings.KAFKA_CONSUMER_GROUP}/offsets/$topic"
+      val consumerOffsetPath = getConsumerOffsetPath(topic)
       if (!ZkUtils.pathExists(zkClientOpt.get, consumerOffsetPath)) {
         LOG.info(s"$consumerOffsetPath not exist, create it!")
         val latestOffsets = com.sogou.kafka.KafkaUtils.getLatestOffsets(
           settings.KAFKA_BROKER_LIST, topic)
         topicPartitionIds(topic).foreach { partitionId =>
           val latestOffset = latestOffsets(partitionId)
+          val consumerPartitionOffsetPath = getConsumerPartitionOffsetPath(topic, partitionId)
           ZkUtils.updatePersistentPath(zkClientOpt.get,
-            s"$consumerOffsetPath/$partitionId", latestOffset.toString)
-          LOG.info(s"init $consumerOffsetPath/$partitionId with offset $latestOffset")
+            consumerPartitionOffsetPath, latestOffset.toString)
+          LOG.info(s"init $consumerPartitionOffsetPath with offset $latestOffset")
         }
       }
     }
 
     // load the consumer offsets
     val fromOffsets = topicPartitionIds.flatMap { case (topic, partitionIds) =>
-      partitionIds.map { partitionId => s"${topic}&${partitionId}" }
+      partitionIds.map { partitionId => s"${topic}&${partitionId}"}
     }.map { topicPartitionId =>
       val arr = topicPartitionId.split("&")
       val topic = arr(0)
       val partitionId = arr(1).toInt
-      val consumerOffsetPath = s"/consumers/${settings.KAFKA_CONSUMER_GROUP}/offsets/$topic"
       (TopicAndPartition(topic, partitionId), ZkUtils.readData(zkClientOpt.get,
-        s"$consumerOffsetPath/$partitionId")._1.toLong)
+        getConsumerPartitionOffsetPath(topic, partitionId))._1.toLong)
     }.toMap
     LOG.info(s"fromOffsets: $fromOffsets")
-
 
     val conf = new SparkConf().
       setAppName(settings.SPARK_APP_NAME).set("spark.scheduler.mode", "FAIR")
@@ -81,21 +87,26 @@ class SparkStreamingDriver(settings: SparkStreamingSettings)
       String, String, StringDecoder, AvroFlumeEventBodyDecoder, String](
         sscOpt.get, kafkaParams, fromOffsets,
         (m: MessageAndMetadata[String, String]) => m.message()
-    )
+      )
 
     var offsetRanges = Array[OffsetRange]()
+    var unCommitBatchNum = 0
 
     inputStream.transform { rdd =>
       offsetRanges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
       rdd
     }.foreachRDD { rdd =>
       processor.process(rdd)
-      // update consumer offsets when batch complete
-      for (o <- offsetRanges) {
-        val consumerOffsetPath = s"/consumers/${settings.KAFKA_CONSUMER_GROUP}/offsets/${o.topic}"
-        ZkUtils.updatePersistentPath(zkClientOpt.get,
-          s"$consumerOffsetPath/${o.partition}", o.untilOffset.toString)
-        LOG.info(s"Update offset: ${o.topic} ${o.partition} ${o.fromOffset} ${o.untilOffset}")
+      unCommitBatchNum += 1
+
+      if (unCommitBatchNum >= settings.KAFKA_OFFSETS_COMMIT_BATCH_INTERVAL) {
+        // update consumer offsets when batch complete
+        for (o <- offsetRanges) {
+            LOG.info(s"commit offset: ${o.topic}, ${o.partition}, ${o.untilOffset}")
+          ZkUtils.updatePersistentPath(zkClientOpt.get,
+            getConsumerPartitionOffsetPath(o.topic, o.partition), o.untilOffset.toString)
+        }
+        unCommitBatchNum = 0
       }
     }
 

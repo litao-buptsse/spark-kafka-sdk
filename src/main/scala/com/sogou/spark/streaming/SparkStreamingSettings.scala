@@ -16,6 +16,7 @@ class SparkStreamingSettings(config: Config) extends Serializable {
 
   val KAFKA_SESSION_TIMEOUT = config.getInt("root.kafka.zookeeperSessionTimeout")
   val KAFKA_CONNECTION_TIMEOUT = config.getInt("root.kafka.zookeeperConnectionTimeout")
+  val KAFKA_OFFSETS_COMMIT_BATCH_INTERVAL = config.getInt("root.kafka.offsetsCommitBatchInterval")
 
   val SPARK_APP_NAME = config.getString("root.spark.appName")
   val BATCH_DURATION_SECONDS = config.getLong("root.spark.streaming.batchDurationSeconds")
