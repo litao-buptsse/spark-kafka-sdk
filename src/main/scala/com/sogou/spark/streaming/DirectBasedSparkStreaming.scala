@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory
 /**
  * Created by Tao Li on 2015/8/19.
  */
-class SparkStreamingDriver(settings: SparkStreamingSettings)
+class DirectBasedSparkStreamingDriver(settings: SparkStreamingSettings)
   extends Driver with Serializable {
   private val LOG = LoggerFactory.getLogger(getClass)
 
@@ -128,10 +128,10 @@ class SparkStreamingDriver(settings: SparkStreamingSettings)
   }
 }
 
-object SparkStreaming {
+object DirectBasedSparkStreaming {
   def main(args: Array[String]) {
     val config = ConfigFactory.load()
-    val driver = new SparkStreamingDriver(new SparkStreamingSettings(config))
+    val driver = new DirectBasedSparkStreamingDriver(new SparkStreamingSettings(config))
 
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       override def run = driver.stop
